@@ -8,7 +8,7 @@ const TYPES = ["Apartment", "House", "Flat", "Villa", "Office", "Shop", "PG Room
 
 const DEFAULT = {
   propertyName: "", propertyType: "Apartment", flatNumber: "", address: "", city: "",
-  rentAmount: "", status: "Vacant", description: "",
+  rentAmount: "", description: "",
 };
 
 export default function PropertyModal({ property, onClose }) {
@@ -97,13 +97,7 @@ export default function PropertyModal({ property, onClose }) {
               <input type="number" className={`input ${errors.rentAmount ? "border-red-400 focus:ring-red-400" : ""}`} placeholder="e.g. 12000" value={form.rentAmount} onChange={e => set("rentAmount", e.target.value)} />
               {errors.rentAmount && <p className="mt-1 text-xs text-red-500">{errors.rentAmount}</p>}
             </div>
-            <div>
-              <label className="label">Status</label>
-              <select className="input" value={form.status} onChange={e => set("status", e.target.value)}>
-                <option>Vacant</option>
-                <option>Rented</option>
-              </select>
-            </div>
+
             <div className="sm:col-span-2">
               <label className="label">Description / Notes</label>
               <textarea className="input resize-none h-20" placeholder="Additional notes about this property..." value={form.description} onChange={e => set("description", e.target.value)} />

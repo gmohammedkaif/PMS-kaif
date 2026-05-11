@@ -1,13 +1,18 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
 import PropertyModal from "../components/PropertyModal";
-import { useProperties, deleteProperty } from "../services/firestore";
+import { useProperties, useTenants, useLeases, deletePropertyCascade, hydratePropertyStatus } from "../services/firestore";
 import { Plus, Search, Edit2, Trash2, Home, MapPin, IndianRupee, Filter, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function Properties() {
-  const { data: properties, loading } = useProperties();
+  const { user } = useAuth();
+  const { data: rawProperties, loading } = useProperties();
+  const { data: tenants } = useTenants();
+  const { data: leases } = useLeases();
+  const properties = hydratePropertyStatus(rawProperties, tenants, leases);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [modal, setModal] = useState(false);
@@ -19,14 +24,14 @@ export default function Properties() {
     const matchSearch = p.propertyName?.toLowerCase().includes(search.toLowerCase()) ||
       p.city?.toLowerCase().includes(search.toLowerCase()) ||
       p.address?.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "All" || p.status === filter;
+    const matchFilter = filter === "All" || p.derivedStatus === filter;
     return matchSearch && matchFilter;
   });
 
   const handleDelete = async (id) => {
     try {
-      await deleteProperty(id);
-      toast.success("Property deleted");
+      await deletePropertyCascade(id, user.uid);
+      toast.success("Property and related records deleted");
       setDeleting(null);
     } catch {
       toast.error("Failed to delete");
@@ -40,7 +45,7 @@ export default function Properties() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h3 className="font-display text-2xl font-bold text-slate-900 dark:text-white">My Properties</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{properties.length} total • {properties.filter(p=>p.status==="Rented").length} rented • {properties.filter(p=>p.status==="Vacant").length} vacant</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{properties.length} total • {properties.filter(p=>p.derivedStatus==="Rented").length} rented • {properties.filter(p=>p.derivedStatus==="Vacant").length} vacant</p>
           </div>
           <button onClick={() => { setEditing(null); setModal(true); }} className="btn-primary shrink-0">
             <Plus className="w-4 h-4" /> Add Property
@@ -96,9 +101,9 @@ export default function Properties() {
                   <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
                     <Home className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                   </div>
-                  <span className={p.status === "Rented" ? "badge-rented" : "badge-vacant"}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${p.status === "Rented" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                    {p.status}
+                  <span className={p.derivedStatus === "Rented" ? "badge-rented" : "badge-vacant"}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${p.derivedStatus === "Rented" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    {p.derivedStatus}
                   </span>
                 </div>
 
@@ -155,7 +160,7 @@ export default function Properties() {
             </div>
             <h4 className="font-display text-xl font-bold text-slate-900 dark:text-white text-center mb-2">Delete Property?</h4>
             <p className="text-sm text-slate-500 text-center mb-6">
-              Are you sure you want to delete <strong>"{deleting.propertyName}"</strong>? This cannot be undone.
+              Are you sure you want to delete <strong>"{deleting.propertyName}"</strong>? This will also remove related tenants, leases, and payments. This cannot be undone.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setDeleting(null)} className="btn-secondary flex-1 justify-center">Cancel</button>

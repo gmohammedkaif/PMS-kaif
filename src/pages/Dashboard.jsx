@@ -1,5 +1,5 @@
 import Layout from "../components/Layout";
-import { useProperties } from "../services/firestore";
+import { useProperties, hydratePropertyStatus, isActiveLease } from "../services/firestore";
 import { useTenants } from "../services/firestore";
 import { useLeases } from "../services/firestore";
 import { usePayments } from "../services/firestore";
@@ -26,18 +26,21 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const COLORS = ["#0ea5e9","#f59e0b","#10b981","#ef4444"];
 
 export default function Dashboard() {
-  const { data: properties } = useProperties();
+  const { data: rawProperties } = useProperties();
   const { data: tenants } = useTenants();
   const { data: leases } = useLeases();
   const { data: payments } = usePayments();
+  const properties = hydratePropertyStatus(rawProperties, tenants, leases);
 
-  const rented = properties.filter(p => p.status === "Rented").length;
-  const vacant = properties.filter(p => p.status === "Vacant").length;
-  const totalRent = properties.filter(p => p.status === "Rented").reduce((s, p) => s + Number(p.rentAmount || 0), 0);
+  const activeTenants = tenants.filter(t => (t.tenantStatus || "Active") === "Active");
+  const activeLeases = leases.filter(isActiveLease);
+  const rented = properties.filter(p => p.derivedStatus === "Rented").length;
+  const vacant = properties.filter(p => p.derivedStatus === "Vacant").length;
+  const totalRent = activeTenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
   const collected = payments.filter(p => p.paymentStatus === "Paid").reduce((s, p) => s + Number(p.amount || 0), 0);
   const pending = payments.filter(p => p.paymentStatus === "Pending").reduce((s, p) => s + Number(p.amount || 0), 0);
 
-  const expiringSoon = leases.filter(l => {
+  const expiringSoon = activeLeases.filter(l => {
     if (!l.endDate) return false;
     const days = differenceInDays(parseISO(l.endDate), new Date());
     return days >= 0 && days <= 60;
@@ -191,7 +194,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t.tenantName}</p>
-                        <p className="text-xs text-slate-500">{t.assignedProperty}</p>
+                        <p className="text-xs text-slate-500">{t.propertyName || t.assignedProperty || "—"}</p>
                       </div>
                     </div>
                     <span className={t.rentStatus === "Paid" ? "badge-paid" : "badge-pending"}>

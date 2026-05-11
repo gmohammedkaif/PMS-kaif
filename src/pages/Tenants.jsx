@@ -17,7 +17,7 @@ export default function Tenants() {
   const filtered = tenants.filter(t => {
     const matchSearch = t.tenantName?.toLowerCase().includes(search.toLowerCase()) ||
       t.email?.toLowerCase().includes(search.toLowerCase()) ||
-      t.assignedProperty?.toLowerCase().includes(search.toLowerCase());
+      (t.propertyName || t.assignedProperty || "").toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === "All" || t.tenantStatus === filter ||
       (filter === "Paid" && t.rentStatus === "Paid") ||
       (filter === "Pending" && t.rentStatus === "Pending");
@@ -109,7 +109,7 @@ export default function Tenants() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-sm">{t.assignedProperty || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-sm">{t.propertyName || t.assignedProperty || "—"}</td>
                       <td className="px-4 py-3">
                         {t.phone && <div className="flex items-center gap-1 text-xs text-slate-500"><Phone className="w-3 h-3"/>{t.phone}</div>}
                         {t.email && <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5"><Mail className="w-3 h-3"/>{t.email}</div>}
@@ -156,7 +156,7 @@ export default function Tenants() {
                       </div>
                       <div>
                         <p className="font-semibold text-slate-800 dark:text-slate-200">{t.tenantName}</p>
-                        <p className="text-xs text-slate-500">{t.assignedProperty}</p>
+                        <p className="text-xs text-slate-500">{t.propertyName || t.assignedProperty || "—"}</p>
                       </div>
                     </div>
                     <div className="flex gap-1">
