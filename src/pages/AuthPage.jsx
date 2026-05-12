@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import toast from "react-hot-toast";
-import { Building2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Home } from "lucide-react";
+import {
+  Building2, Mail, Lock, User, Eye, EyeOff,
+  ArrowRight, Home, Sun, Moon,
+} from "lucide-react";
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -14,13 +18,15 @@ const GoogleIcon = () => (
 );
 
 export default function AuthPage() {
-  const [mode, setMode] = useState("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [mode, setMode]       = useState("login");
+  const [name, setName]       = useState("");
+  const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const { login, register, loginWithGoogle } = useAuth();
+  const { dark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -31,17 +37,23 @@ export default function AuthPage() {
         await login(email, password);
         toast.success("Welcome back!");
       } else {
-        if (!name.trim()) { toast.error("Please enter your name"); setLoading(false); return; }
+        if (!name.trim()) {
+          toast.error("Please enter your name");
+          setLoading(false);
+          return;
+        }
         await register(name, email, password);
         toast.success("Account created successfully!");
       }
       navigate("/dashboard");
     } catch (err) {
-      const msg = err.code === "auth/user-not-found" ? "Account not found" :
-                  err.code === "auth/wrong-password" ? "Incorrect password" :
-                  err.code === "auth/email-already-in-use" ? "Email already registered" :
-                  err.code === "auth/weak-password" ? "Password must be 6+ characters" :
-                  "Something went wrong. Try again.";
+      const msg =
+        err.code === "auth/user-not-found"      ? "Account not found" :
+        err.code === "auth/wrong-password"      ? "Incorrect password" :
+        err.code === "auth/invalid-credential"  ? "Invalid email or password" :
+        err.code === "auth/email-already-in-use"? "Email already registered" :
+        err.code === "auth/weak-password"       ? "Password must be 6+ characters" :
+        "Something went wrong. Try again.";
       toast.error(msg);
     }
     setLoading(false);
@@ -60,8 +72,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
-      {/* Left Panel - Decorative */}
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+
+      {/* ── Theme toggle — always visible top-right ── */}
+      <button
+        onClick={toggleTheme}
+        aria-label="Toggle theme"
+        className="fixed top-4 right-4 z-50 p-2.5 rounded-xl
+          bg-white dark:bg-slate-800
+          border border-slate-200 dark:border-slate-700
+          text-slate-500 dark:text-slate-300
+          hover:bg-slate-100 dark:hover:bg-slate-700
+          shadow-sm transition-all duration-200"
+      >
+        {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+
+      {/* ── Left Panel – decorative (desktop only) ── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 flex-col items-center justify-center p-12">
         {/* Geometric patterns */}
         <div className="absolute inset-0 opacity-10">
@@ -72,7 +99,15 @@ export default function AuthPage() {
         <div className="absolute inset-0 opacity-5">
           {[...Array(20)].map((_, i) => (
             <div key={i} className="absolute border border-white rounded-xl"
-              style={{ width: 60 + i * 30, height: 60 + i * 30, top: `${Math.sin(i) * 50 + 50}%`, left: `${Math.cos(i) * 50 + 50}%`, transform: `translate(-50%, -50%) rotate(${i * 18}deg)`, opacity: 0.3 }} />
+              style={{
+                width:  60 + i * 30,
+                height: 60 + i * 30,
+                top:    `${Math.sin(i) * 50 + 50}%`,
+                left:   `${Math.cos(i) * 50 + 50}%`,
+                transform: `translate(-50%, -50%) rotate(${i * 18}deg)`,
+                opacity: 0.3,
+              }}
+            />
           ))}
         </div>
 
@@ -89,13 +124,12 @@ export default function AuthPage() {
           <p className="text-brand-200 text-lg mb-10 max-w-sm mx-auto leading-relaxed">
             The complete platform to manage all your rental properties, tenants, and leases in one place.
           </p>
-
           <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
             {[
-              { icon: Home, label: "Manage Properties" },
-              { icon: User, label: "Track Tenants" },
-              { icon: Mail, label: "Rent Reminders" },
-              { icon: Lock, label: "Secure & Private" },
+              { icon: Home,  label: "Manage Properties" },
+              { icon: User,  label: "Track Tenants" },
+              { icon: Mail,  label: "Rent Reminders" },
+              { icon: Lock,  label: "Secure & Private" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-2 text-sm text-brand-200 bg-white/10 backdrop-blur rounded-xl px-3 py-2.5">
                 <Icon className="w-4 h-4 text-brand-300 shrink-0" />
@@ -106,30 +140,39 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Right Panel - Auth Form */}
+      {/* ── Right Panel – Auth form ── */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md animate-slide-up">
+
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-2 justify-center mb-8">
             <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="font-display text-2xl font-bold text-brand-700 dark:text-brand-400">PropManager Pro</span>
+            <span className="font-display text-2xl font-bold text-brand-700 dark:text-brand-400">
+              PropManager Pro
+            </span>
           </div>
 
           <div className="card p-8">
+            {/* Header */}
             <div className="mb-8">
               <h2 className="font-display text-3xl font-bold text-slate-900 dark:text-white mb-2">
                 {mode === "login" ? "Welcome back" : "Create account"}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm">
-                {mode === "login" ? "Sign in to manage your properties" : "Start managing your properties today"}
+                {mode === "login"
+                  ? "Sign in to manage your properties"
+                  : "Start managing your properties today"}
               </p>
             </div>
 
-            {/* Google Button */}
-            <button onClick={handleGoogle} disabled={loading}
-              className="w-full flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium py-3 rounded-xl transition-all duration-200 mb-6 shadow-sm">
+            {/* Google */}
+            <button
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium py-3 rounded-xl transition-all duration-200 mb-6 shadow-sm disabled:opacity-60"
+            >
               <GoogleIcon />
               Continue with Google
             </button>
@@ -140,14 +183,20 @@ export default function AuthPage() {
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
             </div>
 
+            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               {mode === "register" && (
                 <div>
                   <label className="label">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input className="input pl-10" placeholder="John Doe" value={name}
-                      onChange={(e) => setName(e.target.value)} required />
+                    <input
+                      className="input pl-10"
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
               )}
@@ -156,8 +205,14 @@ export default function AuthPage() {
                 <label className="label">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input type="email" className="input pl-10" placeholder="you@example.com" value={email}
-                    onChange={(e) => setEmail(e.target.value)} required />
+                  <input
+                    type="email"
+                    className="input pl-10"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
 
@@ -165,18 +220,29 @@ export default function AuthPage() {
                 <label className="label">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input type={showPass ? "text" : "password"} className="input pl-10 pr-10"
-                    placeholder="••••••••" value={password}
-                    onChange={(e) => setPassword(e.target.value)} required />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  <input
+                    type={showPass ? "text" : "password"}
+                    className="input pl-10 pr-10"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(v => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
                     {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <button type="submit" disabled={loading}
-                className="btn-primary w-full justify-center py-3 text-base disabled:opacity-60">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full justify-center py-3 text-base disabled:opacity-60"
+              >
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -196,12 +262,19 @@ export default function AuthPage() {
 
             <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
               {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button onClick={() => setMode(mode === "login" ? "register" : "login")}
-                className="text-brand-600 dark:text-brand-400 font-semibold hover:underline">
+              <button
+                onClick={() => setMode(mode === "login" ? "register" : "login")}
+                className="text-brand-600 dark:text-brand-400 font-semibold hover:underline"
+              >
                 {mode === "login" ? "Sign up" : "Sign in"}
               </button>
             </p>
           </div>
+
+          {/* Theme hint on mobile (small helper text) */}
+          <p className="text-center text-xs text-slate-400 dark:text-slate-600 mt-4">
+            {dark ? "🌙 Dark mode" : "☀️ Light mode"} — toggle with the button in the top-right corner
+          </p>
         </div>
       </div>
     </div>
